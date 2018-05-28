@@ -1,101 +1,85 @@
 import Peer;
+import Protocal;
+import Post;
 import java.io.*;
 import java.net.*;
 /**
     The class deals with network transmission.
+
     想要请求活跃Peer列表怎么办？
-        Transmission t=new Transmission(type);
-        t.send(peer);
+        Transmission.requestPeerList(peer);
+        会打开一个新线程，向peer请求列表，更新数据库
+        并在结束时返回一些信号，这里我还不会，计划用notify
+    想要请求一段时间的帖子怎么办？
+        Transmission.requestPost(peer,time);
+        会打开一个新线程，自己处理之后的事，与本线程用信号进行通信
     想要开始泛洪怎么办?
-        Transmission t=new Transmission();
-        t.setContent(content);
-        t.floodfill();
+        Transmission.floodfill(post);
+        会打开很多新线程，自己处理之后的事，与本线程用信号通信
+    想要发送心跳包怎么办？
+        Transmission.sendHeartbeat();
+        会打开很多线程，自己处理后事，与本线程用信号通信
     想要接收数据怎么办？
         Transmission demo=new Transmission();
-        demo.listen();//会一直循环监听，并开启多线程处理好一切
-
+        demo.listen(port);
+        会打开新线程，一直循环监听port端口，并开启多线程处理好一切
     @author Sun Youran
 */
 public class Transmission implements Runnable{
-    /**
-        @type P2P协议的类型
-            1:GlobalActivePeerListRequest
-            2:GlobalActivePeerListResponse
-            3:Heartbeat
-            4:Post
-    */
-    byte type=-1;
-    String content="error";
     private Socket socket;
-    /**
-        构造函数们
-    */
-    Transmission(){}
-    Transmission(byte type){
-        this.type=type;
+    private byte type;
+    public static void requestPeerList(Peer peer){
+        Guest g=new Guest(Protocal.RPL,peer);
+        Thread t=new Thread(g);
+        t.start();
     }
-    /**
-        点对点传输，使用时只需要：
-            Transmission.send(peer);
-    */
-    public void send(Peer dst){
-        Socket socket=new Socket(dst.getstrip(),dst.getport());
-        PrintWriter out=new PrintWriter(socket.getOutputStream(),true);//true 是缓冲区满自动发送
-        //这一行应该根据type输出一行指定协议类型的信息
-        out.println(content);
-        out.close();
+    public static void requestPost(Peer peer,long time){
+        Guest g=new Guest(Protocal.RP,peer,time);
+        Thread t=new Thread(g);
+        t.start();
     }
-    public void floodfill(){
-        //根据content生成散列，如果没收到过就发送，收到过就算了
-        //生成要发送的Peer列表
-        //挨个发送
-    }
-    /**
-        聆听网络通信，每一个端口只需要开一个，它会处理好一切
-    */
-    public void listen(){
-        ServerSocket ss = new ServerSocket(3333);//这个端口也应该怎么改一下
-        whlie(1){//何时退出这个死循环我还没有想好
-            Transmission subtrans=new Transmission();
-            subtrans.setSocket(ss.accept());
-            Thread t=new Thread(subtrans,"thread name");
-            t.start();
+    public static void floodfill(Post aPost){
+        try{
+            Class.forName("org.sqlite.JDBC");
+            Connection c=DriverManager.getConnection("jdbc:sqlite:PeerList.db");
+            Statement stmt = c.createStatement();
+            ResultSet rs = stmt.executeQuery( "SELECT * FROM COMPANY;" );
+            while(rs.next()){
+                String ip=rs.getString("IP");
+                int port=rs.getInt("PORT");
+                String key=rs.getString("KEY");
+                Guest g=new Guest(Protocal.FF,new Peer(ip,port,key),aPost);
+                Thread t=new Thread(g);
+                t.start();
+            }
+            rs.close();stmt.close();c.close();
+        }catch ( Exception e ) {
+            System.err.println( e.getClass().getName() + ": " + e.getMessage() );
         }
     }
-    /**
-        在
-            Thread t=new Thread(aTransmission,"thread name");
-            t.start();
-        后会执行的函数，负责根据this.socket确定通信类型并进行后续的处理
-    */
-    void run(){
-        //从this.socket中确定type和content
-        switch(this.type){
-            case(1):
-                //handleGlobalActivePeerListRequest
-                break;
-            case(2):
-                //handleGlobalActivePeerListResponse
-                break;
-            case(3):
-                //handleHeartbeat
-                break;
-            case(4):
-                //handlePost
-                break;
+    public static void sendHeartbeat(){
+        try{
+            Class.forName("org.sqlite.JDBC");
+            Connection c=DriverManager.getConnection("jdbc:sqlite:PeerList.db");
+            Statement stmt = c.createStatement();
+            ResultSet rs = stmt.executeQuery( "SELECT * FROM COMPANY;" );
+            while(rs.next()){
+                String ip=rs.getString("IP");
+                int port=rs.getInt("PORT");
+                String key=rs.getString("KEY");
+                Guest g=new Guest(Protocal.HB,new Peer(ip,port,key));
+                Thread t=new Thread(g);
+                t.start();
+            }
+            rs.close();stmt.close();c.close();
+        }catch ( Exception e ) {
+            System.err.println(e.getClass().getName()+": "+e.getMessage());
         }
     }
-    private void handleGlobalActivePeerListRequest(){
-        //根据this.socket中的信息应该能新建一个Peer并返回给他他想要的东西
-    }
-    private void handleGlobalActivePeerListResponse(){
-        //更新Peerlist
-    }
-    private void handleHeartbeat(){
-
-    }
-    private void handleFloodfill(){
-        //查看是否收到过这个帖子如果没有则写入记录并直接调用floodfill即可
+    public static void listen(int port){
+        Server ser=new Server(port);
+        Thread t=new Thread(ser);
+        t.start();
     }
     /**
         Java程序照例会有的无聊程序
@@ -106,8 +90,11 @@ public class Transmission implements Runnable{
     public void setType(byte t){
         this.type=t;
     }
-    public void setContent(String c){
-        this.content=c;
+    public byte getType(){
+        return this.type;
+    }
+    public Socket getSocket(){
+        return this.socket;
     }
 }
 /*TCP Client
