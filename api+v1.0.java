@@ -1,112 +1,30 @@
-class Peer
-{
-    String ip;
-    int port, lastActiveTime;
-}
-
 /**
-    孙悠然在2018_5_26日修改
+    Peer：孙悠然在20180528修改
 */
-class Transmission{
-    byte type;
-    Object content;
-    private Socket socket;
-    Transmission(){}
-    Transmission(byte type,Object content){}
-    void send(Peer destination){}
-    void floodfill(){}
-    void listen(){}
-    void handleGlobalActivePeerListRequest(Peer src){}
-    void handleGlobalActivePeerListResponse(){}
-    void handleHeartbeat(String time){}
-    void handlePost(Post post){}
+public class Peer{
+    private String strip;
+    private int port;
+    private String publicKeyString;
+    Peer(String strip,int port){}
+    Peer(String strip,int port,String pk){}
+    public String toString(){}
+    public int hashCode(){}
+    public static void main(String argv[]){}
 }
-
-
-class GlobalActivePeerList
-{
-    static Peer[] peer;
-
-    static void loadFromFile() //开启app时从文件读入到内存中
-    {
-
-    }
-
-    static void saveToFile() //退出app时保存到文件
-    {
-
-    }
-
-    static Peer[] generateCopy()
-    {
-
-    }
-
-    static void add(Peer peer)
-    {
-
-    }
+/**
+    Post：孙悠然在20180528修改
+*/
+public class Post{
+    public static final int THEHASHCODE=0;
+    private long time;
+    private String  content;
+    private int parentHashCode;
+    Post(long t,String c){}
+    Post(long t,String c,int f){}
+    public int hashCode(){}
+    public String toString(){}
+    public static void main(String argv[]){}
 }
-
-
-class RecentActivePeerList
-{
-    static Peer[] peer;
-    static int ACTIVE_DURATION; //多少时间内算“最近”
-
-    static void loadFromFile()
-    {
-
-    }
-
-    static void saveToFile()
-    {
-
-    }
-
-    static Peer[] generateCopy()
-    {
-
-    }
-
-    static void add(Peer peer)
-    {
-
-    }
-}
-
-
-class Post
-{
-    String time, parentPostHash, content;
-}
-
-
-class PostList
-{
-    Post[] Post; // 始终按时间顺序排序
-
-    static void loadFromFile() //
-    {
-
-    }
-
-    static void saveToFile()
-    {
-
-    }
-
-    static Peer[] generate()
-    {
-
-    }
-
-    static void add(Post post)
-    {
-
-    }
-}
-
 
 class GUI
 {
