@@ -1,30 +1,30 @@
 /**
-    Post类，表示一个帖子，有三个基本变量：
-        @time 帖子发出的时间，以自纪元以来的秒数表示，为一个long（因为int只能存大约30年）
-        @content 帖子的内容，为一个字符串
-        @parentHashCode 父帖子的哈希值，为一个int
-    另外有一个静态常量：
-        @THEHASHCODE 为没有父帖子时的哈希
+    Post类，表示一个帖子。
 
-    @author 孙悠然
+    @author WhyMustIHaveAName
 */
 public class Post{
+    /**没有父帖子时的哈希*/
     public static final int THEHASHCODE=0;
+    /**帖子发出的时间，以自纪元以来的秒数表示，为一个long（因为int只能存大约30年）*/
     private long time;
+    /**帖子的内容，为一个字符串*/
     private String  content;
+    /**父帖子的哈希值，为一个int*/
     private int parentHashCode;
+    /**以c为内容以t为时间构造Post，parentHashCode默认为THEHASHCODE*/
     Post(long t,String c){
         this.time=t;
         this.content=c;
+        this.parentHashCode=Post.THEHASHCODE;
     }
+    /**以c为内容以t为时间以f为父哈希值构造Post*/
     Post(long t,String c,int f){
         this.time=t;
         this.content=c;
         this.parentHashCode=f;
     }
-    /**
-        返回这个帖子的哈希，一个int型整数
-    */
+    /**返回这个帖子的哈希，一个int型整数*/
     public int hashCode(){
         String h=String.format("%d%d%d",content.hashCode(),parentHashCode,time);
         //time在最后使得时间接近的内容相同的帖子有相近的哈希，
@@ -40,6 +40,7 @@ public class Post{
                                this.parentHashCode,this.content);
         return s;
     }
+    /**运行main函数可以测试类的好坏*/
     public static void main(String argv[]){
         Post p=new Post(1,"helloworld");
         System.out.println(p.toString());
