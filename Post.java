@@ -6,6 +6,7 @@
 public class Post{
     /**没有父帖子时的哈希*/
     public static final int THEHASHCODE=0;
+    public static final char DOUHAO='\u1234';
     /**帖子发出的时间，以自纪元以来的秒数表示，为一个long（因为int只能存大约30年）*/
     private long time;
     /**帖子的内容，为一个字符串*/
@@ -37,7 +38,8 @@ public class Post{
     */
     public String toString(){
         String s=String.format("[%d,%d,%d,%s]",this.time,this.hashCode(),
-                               this.parentHashCode,this.content);
+                               this.parentHashCode,
+                               this.content.replace(',',this.DOUHAO));
         return s;
     }
     /**运行main函数可以测试类的好坏*/

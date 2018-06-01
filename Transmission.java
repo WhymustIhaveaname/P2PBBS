@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.*;
+import java.util.*;
 /**
     最后被包装好供主程序直接调用的类。
 使用方法：
@@ -27,14 +28,12 @@ public class Transmission{
     /**向peer请求节点列表*/
     public static void requestPeerList(Peer peer){
         Client g=new Client(Protocal.RPL,peer);
-        g.setContent("[]");
         Thread t=new Thread(g);
         t.start();
     }
     /**向peer请求time之后的帖子*/
     public static void requestPost(Peer peer,long time){
         Client g=new Client(Protocal.RP,peer);
-        g.setContent(String.format("[BEFORE:%d]",Date().getTime()/1000));
         Thread t=new Thread(g);
         t.start();
     }
@@ -47,7 +46,7 @@ public class Transmission{
     }
     /**打开TCPserver和UDPServer*/
     public static void listen(int port){
-        Server ser=new Server(port,Server.TCP);
+        Server ser=new Server(Server.TCP,port);
         Thread t=new Thread(ser);
         t.start();
     }

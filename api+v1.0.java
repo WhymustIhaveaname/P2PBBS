@@ -1,23 +1,23 @@
 /**设计文档：孙悠然版
 一。关于通信协议
     一个数据报包括三个部分：数据报头，数据报体和数据报尾。数据报头格式如下：
-    [num:STR]\t\n[]\t\n
+    [num:STR]\r\n[]\r\n
 其中num是协议类型的编号，STR是协议类型对应的字符串，详见下面或者Protocol的注释。
 数据报头中的空方括号是留待将来RSA加密发送嗯公钥使用。数据报体为正文，依协议不同
 而不同。数据报尾格式如下：
-    \t\n[END]
+    \r\n[END]
 用于分界和校验。
 二。关于通信过程
     1.请求Peer列表的操作
         编号：1，对应字符串：RPL，请求时发送：
-        [1:RPL]\t\n[]\t\n
+        [1:RPL]\r\n[]\r\n
         []
-        \t\n[END]
+        \r\n[END]
     对方peer处理后会返回：
-        [5:RPLR]\t\n[]\t\n
-        [[x.x.x.x:x,pk],[x.x.x.x:x,pk],...]
-        \t\n[END]
-    其中[x.x.x.x:x,pk]的样子恰好就是Peer.toString()返回的样子。本机接受对方的返
+        [5:RPLR]\r\n[]\r\n
+        [[x.x.x.x:x,pk,t1],[x.x.x.x:x,pk,t1],...]
+        \r\n[END]
+    其中pk是公钥，没有就是null，t1是最近活跃时间。本机接受对方的返
     回数据后更新数据库。用TCP实现。
         主程序调用Transmission.requestPeerList(peer);会打开一个新线程，此线程会
     向刚刚指定的peer请求Peer列表，并更新数据库。在requestPeerList(peer)中，首先
@@ -73,14 +73,10 @@
 四。等着你写的东西
     Server的：
         listenUDP()
-        replyRPL()的一部分
-        replyRP()
         dealFF()
     Client的：
-        sendRPL()的一半
-        sendRP()
         sendFF()
-    数据库那里有一个防止sql注入，还有定时发送心跳包的部分WhyMustIHaveAName想写。  
+    数据库那里有一个防止sql注入，还有定时发送心跳包的部分WhyMustIHaveAName想写。
 
 */
 

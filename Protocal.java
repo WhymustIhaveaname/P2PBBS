@@ -16,12 +16,14 @@
         \t\n[END]
     RPLR：请求节点列表返回
         [5:RPLR]\t\n[]\t\n
-        [[x.x.x.x:x,pk],[x.x.x.x:x,pk],...]
+        [[x.x.x.x:x,pk,t1],[x.x.x.x:x,pk,t1],...,]
         \t\n[END]
     RPR：请求帖子返回
         [6:RPR]\t\n
         [p1.toString,p2.toString,p3.toString]
+
         \t\n[END]
+    其中p1.toString为[时间,哈希,父哈希,内容]
     @author WhyMustIHaveAName
 */
 public class Protocal{
@@ -39,4 +41,6 @@ public class Protocal{
     public static final byte RPR=6;//Request Post Reply
     /**不同的协议对应的字符串*/
     public static final String[] PSTR={"","RPL","FF","HB","RP","RPLR","RPR"};
+    public static final String[] PHSTR={"","[1:RPL]","[2:FF]","[3:HB]","[4:RP]"
+                                ,"[5:RPLR]","[6:RPR]"};
 }
