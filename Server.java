@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.*;
 import java.sql.*;
 import java.util.logging.*;
+//test
 /**
     作为服务器的类，监听tcp或udp端口，处理请求并返回。应作为后台进程一直开着。
 当作为udp服务器时，会自动定时发送心跳包。
