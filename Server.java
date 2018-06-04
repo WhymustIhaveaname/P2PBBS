@@ -19,11 +19,13 @@ public class Server implements Runnable{
     public static final byte TCP=1;
     /**作为UDP服务器是mode的值*/
     public static final byte UDP=2;
+    /**UDP通信时接受的最大消息长度（字节数）*/
+    public static final int MAX_UDP_MESSAGE_LENGTH = 65536;
+    private static Logger log=Logger.getLogger("lavasoft");
     /**制定这个服务器处于哪种模式*/
     private byte mode;
     /**指定这个服务器监听哪个端口*/
     private int port;
-    private static Logger log=Logger.getLogger("lavasoft");
     /**启动一个监听port端口的TCP服务器，它会自动启动同端口的UDP服务器*/
     Server(int p){
         this.mode=Server.TCP;
@@ -100,15 +102,39 @@ public class Server implements Runnable{
             log.info("Server quit while loop");
         }
     }
+    
     /**监听UDP端口的Server,用于处理与泛洪法相关的数据报*/
-    private void listenUDP(){
-        //打开UDP端口
-        //while(1){
-            //读一个UDP数据报
-            //根据数据报确定类型
-            //进行响应处理和返回
-        //}
+    private void listenUDP()
+    {
+        log.info("in function listenUDP");
+        try
+        {
+            DatagramSocket datagramSocket = new DatagramSocket(this.port);
+            DatagramPacket datagramPacket = new DatagramPacket(new byte[MAX_UDP_MESSAGE_LENGTH], MAX_UDP_MESSAGE_LENGTH);
+            while (true)
+            {
+                try
+                {
+                    log.info("wait to receive");
+                    datagramSocket.receive(datagramPacket);
+                    String datagramString = new String(datagramPacket.getData(), 0 , datagramPacket.getLength());
+                    log.info("Server received message:" + datagramString);
+                    log.info("From: "+datagramPacket.getAddress()+":"+datagramPacket.getPort());
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                    log.info("Exception caught when waiting to receive: "+e.getMessage());
+                }
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            log.info("Exception caught in listenUDP: "+e.getMessage());
+        }
     }
+    
     /**处理请求节点列表*/
     private void replyRPL(Socket socket){
         //生成返回数据报body
