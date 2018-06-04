@@ -22,8 +22,17 @@ public class Test{
         Transmission.requestPost(new Peer("127.0.0.1:3333",null),0);
     }
 
+    public static void testReceiveUDP()
+    {
+        System.out.println("in testUDP");
+        Server ser = new Server(Server.UDP, 6666);
+        Thread t = new Thread(ser);
+        t.start();
+    }
+
     public static void main(String args[]){
         //Test.testRPL();
-        Test.testRP();
+        //Test.testRP();
+        Test.testReceiveUDP();
     }
 }

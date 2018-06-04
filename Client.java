@@ -215,8 +215,29 @@ public class Client implements Runnable{
         BufferedReader in=new BufferedReader(new StringReader(s));
         c.sendRPAux(in);
     }
+    
+    public static void testSendUDP(String message)
+    {
+        System.out.println("in testSendUDP");
+        try
+        {
+            DatagramSocket datagramSocket = new DatagramSocket();
+            datagramSocket.setSoTimeout(10000);
+            InetAddress host = InetAddress.getByName("localhost");
+            DatagramPacket datagramPacket = new DatagramPacket(message.getBytes(), message.length(), host, 6666);
+            datagramSocket.send(datagramPacket);
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            log.info("Exception caught in testSendUDP: "+e.getMessage());
+        }
+    }
+    
     public static void main(String args[]){
-        testSendRPAux();
+        System.out.println("in Client.java main");
+        //testSendRPAux();
+        testSendUDP(args[0]);
     }
     /**泛洪法发送帖子*/
     private void sendFF(){
