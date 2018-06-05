@@ -47,15 +47,14 @@ public class Client implements Runnable{
         try{
             socket=new Socket(this.dst.getstrip(),this.dst.getport());
         }catch(Exception e){
-            e.printStackTrace();
-            return;
+            log.warning("Create socket failed");
+            e.printStackTrace();return;
         }
         try{
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             PrintWriter out=new PrintWriter(socket.getOutputStream(),true);
             out.println(String.format("%s%s%s",Protocal.genHead(this.type),this.content,Protocal.genTail(this.type)));
             out.flush();
-
             log.info("request has send.waiting for server's reply");
             sendRPLAux(in);
             out.close();//out.close一定要放在后面，因为close时会释放socket导致in不可用
@@ -66,11 +65,9 @@ public class Client implements Runnable{
     }
     /**sendRPL中用于处理返回的函数*/
     private void sendRPLAux(BufferedReader in){
-        //检查头部
         try{
+            //检查头部
             Protocal.confirmHead(in.readLine(),Protocal.RPLR);
-        }catch(Exception e){e.printStackTrace();}
-        try{
             StringBuilder contentBuilder=new StringBuilder();
             String temp;
             while((temp=in.readLine())!=null){
@@ -80,19 +77,17 @@ public class Client implements Runnable{
             log.info("get server's reply\n"+content);
             //检查尾部
             if(!content.endsWith(",][END]")){
-                //应该抛出一个结尾不正确异常
-                log.info("return tail error");
+                throw new P2PBBSException("Tail error");
             }
             //把头和尾截掉
             content=content.substring(2,content.length()-8);
             //打开数据库
             Class.forName("org.sqlite.JDBC");
             Connection conn=DriverManager.getConnection("jdbc:sqlite:Datas.db");
-            //conn.setAutoCommit(false);
             String s="INSERT INTO PEER(IPORT,PUBKEY,T1) VALUES(?,?,?);";
             PreparedStatement preStat=conn.prepareStatement(s);
             for(String i:content.split("\\],\\[")){
-                //log.info("saving"+i);
+                log.info("saving "+i);
                 String[] j=i.split(",");
                 preStat.setString(1,j[0]);
                 preStat.setString(2,j[1]);
@@ -101,9 +96,7 @@ public class Client implements Runnable{
                     preStat.executeUpdate();
                     preStat.clearParameters();
                 }catch(org.sqlite.SQLiteException e){
-                    //System.out.println("catched---------------------");
-                    //e.printStackTrace();
-                    //System.out.println("---------------------");
+                    log.info("peer has exist");
                     preStat=conn.prepareStatement(s);
                 }
             }
@@ -127,9 +120,8 @@ public class Client implements Runnable{
         try{
             socket=new Socket(this.dst.getstrip(),this.dst.getport());
         }catch(Exception e){
-            log.info("create socket error");
-            e.printStackTrace();
-            return;
+            log.info("create socket failed");
+            e.printStackTrace();return;
         }
         try{
             PrintWriter out=new PrintWriter(socket.getOutputStream(),true);
@@ -144,37 +136,27 @@ public class Client implements Runnable{
             e.printStackTrace();
         }
     }
+    /**sendRP中用于处理返回的函数*/
     private static void sendRPAux(BufferedReader in){
         //检查头部
         try{
             Protocal.confirmHead(in.readLine(),Protocal.RPR);
-        }catch(Exception e){e.printStackTrace();}
-        String reply;
-        try{
             StringBuilder contentBuilder=new StringBuilder();
             String temp;
             while((temp=in.readLine())!=null){
                 contentBuilder.append(temp);
             }
-            reply=contentBuilder.toString();
+            String reply=contentBuilder.toString();
             log.info("get server's reply\n"+reply);
-        }catch(Exception e){
-            e.printStackTrace();
-            return;
-        }
-        //检查尾部
-        if(!(reply.endsWith(",][END]"))){
-            //应该抛出一个结尾不正确异常
-            log.info("return tail error");
-            return;
-        }
-        //把头和尾截掉
-        reply=reply.substring(2,reply.length()-8);
-        //打开数据库
-        try{
+            //检查尾部
+            if(!(reply.endsWith(",][END]"))){
+                throw new P2PBBSException("Tail error");
+            }
+            //把头和尾截掉
+            reply=reply.substring(2,reply.length()-8);
+            //打开数据库
             Class.forName("org.sqlite.JDBC");
             Connection conn=DriverManager.getConnection("jdbc:sqlite:Datas.db");
-            //conn.setAutoCommit(false);
             String s="INSERT INTO POST(TIME,HASH,PHASH,CONTENT) VALUES(?,?,?,?);";
             PreparedStatement preStat=conn.prepareStatement(s);
             for(String i:reply.split("\\],\\[")){
@@ -196,15 +178,15 @@ public class Client implements Runnable{
             e.printStackTrace();
         }
     }
+    /**测试sendRPAux功能的函数*/
     public static void testSendRPAux(){
-        String s="[6:RPR]\r\n[]\r\n[[1,2049459487,0,helloworld],[2,2049459488,0,helloworld],]\r\n[END]";
+        String s="[6:RPR]\r\n[[1,2049459487,0,helloworld],[2,2049459488,0,helloworld],]\r\n[END]";
         Client c=new Client((byte)1);
         BufferedReader in=new BufferedReader(new StringReader(s));
         c.sendRPAux(in);
     }
 
-    public static void testSendUDP(String message)
-    {
+    public static void testSendUDP(String message){
         System.out.println("in testSendUDP");
         try
         {
@@ -222,9 +204,9 @@ public class Client implements Runnable{
     }
 
     public static void main(String args[]){
-        System.out.println("in Client.java main");
-        //testSendRPAux();
-        testSendUDP(args[0]);
+        //testSendRPLAux();
+        testSendRPAux();
+        //testSendUDP(args[0]);
     }
     /**泛洪法发送帖子*/
     private void sendFF(){
@@ -250,4 +232,4 @@ public class Client implements Runnable{
     public String getContent(){
         return this.content;
     }
-}
+  }
