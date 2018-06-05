@@ -53,12 +53,12 @@ public class Client implements Runnable{
         try{
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             PrintWriter out=new PrintWriter(socket.getOutputStream(),true);
-            out.println(String.format("%s%s%s",this.genHead(),this.content,this.genTail()));
+            out.println(String.format("%s%s%s",Protocal.genHead(this.type),this.content,Protocal.genTail(this.type)));
             out.flush();
 
             log.info("request has send.waiting for server's reply");
             sendRPLAux(in);
-            out.close();
+            out.close();//out.close一定要放在后面，因为close时会释放socket导致in不可用
             in.close();
         }catch(Exception e){
             e.printStackTrace();
@@ -66,16 +66,11 @@ public class Client implements Runnable{
     }
     /**sendRPL中用于处理返回的函数*/
     private void sendRPLAux(BufferedReader in){
+        //检查头部
         try{
-            //检查头部
-            String head1=in.readLine();
-            if(!(head1.equals("[5:RPLR]"))){
-                //这里应该抛出一个返回头不正确异常
-                log.info("return head error:%s"+head1);
-            }else{
-                log.info("get head:"+head1);
-            }
-            String head2=in.readLine();
+            Protocal.confirmHead(in.readLine(),Protocal.RPLR);
+        }catch(Exception e){e.printStackTrace();}
+        try{
             StringBuilder contentBuilder=new StringBuilder();
             String temp;
             while((temp=in.readLine())!=null){
@@ -120,7 +115,7 @@ public class Client implements Runnable{
     /**测试sendRPLAux功能的函数*/
     public static void testSendRPLAux(){
         Client c=new Client((byte)1);
-        String s="[5:RPLR]\r\n[]\r\n[[0.0.0.0:3333,null,12335],[1.1.1.1:4444,null,123456],]\r\n[END]";
+        String s="[5:RPLR]\r\n[[0.0.0.0:3333,null,12335],[1.1.1.1:4444,null,123456],]\r\n[END]";
         BufferedReader in=new BufferedReader(new StringReader(s));
         c.sendRPLAux(in);
     }
@@ -138,7 +133,7 @@ public class Client implements Runnable{
         }
         try{
             PrintWriter out=new PrintWriter(socket.getOutputStream(),true);
-            out.println(String.format("%s%s%s",this.genHead(),this.content,this.genTail()));
+            out.println(String.format("%s%s%s",Protocal.genHead(this.type),this.content,Protocal.genTail(this.type)));
             out.flush();
             log.info("request has send.waiting for server's reply");
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -150,18 +145,10 @@ public class Client implements Runnable{
         }
     }
     private static void sendRPAux(BufferedReader in){
+        //检查头部
         try{
-            String head1=in.readLine();
-            if(!(head1.equals("[6:RPR]"))){
-                //这里应该抛出一个返回头不正确异常
-                log.info("return head error:"+head1);
-            }else{
-                log.info("get head:"+head1);
-            }
-            String head2=in.readLine();
-        }catch(Exception e){
-            e.printStackTrace();
-        }
+            Protocal.confirmHead(in.readLine(),Protocal.RPR);
+        }catch(Exception e){e.printStackTrace();}
         String reply;
         try{
             StringBuilder contentBuilder=new StringBuilder();
@@ -215,7 +202,7 @@ public class Client implements Runnable{
         BufferedReader in=new BufferedReader(new StringReader(s));
         c.sendRPAux(in);
     }
-    
+
     public static void testSendUDP(String message)
     {
         System.out.println("in testSendUDP");
@@ -233,7 +220,7 @@ public class Client implements Runnable{
             log.info("Exception caught in testSendUDP: "+e.getMessage());
         }
     }
-    
+
     public static void main(String args[]){
         System.out.println("in Client.java main");
         //testSendRPAux();
@@ -255,17 +242,6 @@ public class Client implements Runnable{
         }catch ( Exception e ) {
             e.printStackTrace();
         }
-    }
-
-    /**生成数据报头*/
-    public String genHead(){
-        String s=String.format("[%d:%s]\r\n[]\r\n",this.type,Protocal.PSTR[this.type]);
-        return s;
-
-    }
-    /**生成数据报尾*/
-    public String genTail(){
-        return String.format("\r\n[END]");
     }
 
     public void setContent(String s){
