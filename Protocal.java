@@ -1,36 +1,36 @@
 /**
     定义了点对点传输协议的样子。定义了一些常量。
     RPL：请求节点列表
-        [1:RPL]\t\n[END]
+        [1:RPL]\r\n[END]
     FF：泛洪
-        [2:FF]\t\n
+        [2:FF]\r\n
         Post.toString()或[时间,哈希,父哈希,内容]
-        \t\n[END]
+        \r\n[END]
     HB：心跳
-        [3:HB]\t\n
-        [x.x.x.x:x,TIME:blabla]
-        \t\n[END]
+        [3:HB]\r\n
+        [x.x.x.x:x]
+        \r\n[END]
     RP：请求帖子
-        [4:RP]\t\n
+        [4:RP]\r\n
         [BEFORE:TimeStramp]
-        \t\n[END]
+        \r\n[END]
     RPLR：请求节点列表返回
-        [5:RPLR]\t\n
+        [5:RPLR]\r\n
         [[x.x.x.x:x,pk,t1],[x.x.x.x:x,pk,t1],...,]
-        \t\n[END]
+        \r\n[END]
     RPR：请求帖子返回
-        [6:RPR]\t\n
+        [6:RPR]\r\n
         [p1.toString,p2.toString,p3.toString]
-        \t\n[END]
+        \r\n[END]
     其中p1.toString为[时间,哈希,父哈希,内容]
     RPK：请求公钥
-        [7:RPK]\t\n
+        [7:RPK]\r\n
         [一个节点,...]
-        \t\n[END]
+        \r\n[END]
     RPKR:请求公钥返回
-        [8:RPKR]\t\n
+        [8:RPKR]\r\n
         [一个节点:公钥,...]
-        \t\n[END]
+        \r\n[END]
 
     @author WhyMustIHaveAName
 */
@@ -49,6 +49,7 @@ public class Protocal{
     public static final byte RPR=6;//Request Post Reply
     /**不同的协议对应的字符串*/
     public static final String[] PSTR={"","RPL","FF","HB","RP","RPLR","RPR","RPK","RPKR"};
+    /**不同协议对应报头的字符串*/
     public static final String[] PHSTR={"","[1:RPL]","[2:FF]","[3:HB]","[4:RP]"
                                 ,"[5:RPLR]","[6:RPR]","[7:RPK]","[8:RPKR]"};
     /**生成数据报头*/

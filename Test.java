@@ -30,9 +30,15 @@ public class Test{
         t.start();
     }
 
+    public static void testHB(){
+        Server ser = new Server(Server.UDP, 3333);
+        Thread t = new Thread(ser);
+        t.start();
+    }
     public static void main(String args[]){
         //Test.testRPL();
         //Test.testRP();
-        Test.testReceiveUDP();
+        //Test.testReceiveUDP();
+        Test.testHB();
     }
 }
