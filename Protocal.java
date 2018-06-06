@@ -8,7 +8,7 @@
         \r\n[END]
     HB：心跳
         [3:HB]\r\n
-        [x.x.x.x:x]
+        [PORT:x]
         \r\n[END]
     RP：请求帖子
         [4:RP]\r\n
