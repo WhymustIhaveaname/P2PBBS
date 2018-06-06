@@ -45,26 +45,31 @@ public class Server implements Runnable{
     public void run(){
         switch(this.mode){
             case(Server.TCP):
-                //打开UDPServer
-                Server ser=new Server(Server.UDP,this.port);
-                Thread t=new Thread(ser);
-                t.start();
-                listenTCP();
+                try{
+                    listenTCP();
+                }catch(P2PBBSException e){
+                    e.printStackTrace();
+                }
                 break;
             case(Server.UDP):
-                //打开HeartbeatServer
-                Server ser2=new Server(Server.HEARTBEATSERVER,this.port);
-                Thread t2=new Thread(ser2);
-                t2.start();
-                listenUDP();
+                try{
+                    listenUDP();
+                }catch(P2PBBSException e){
+                    e.printStackTrace();
+                }
                 break;
             case(Server.HEARTBEATSERVER):
-                sendHeartbeat();break;
+                try{
+                    sendHeartbeat();
+                }catch(P2PBBSException e){
+                    e.printStackTrace();
+                }
+                break;
         }
     }
 
     /**监听TCP端口的Server*/
-    private void listenTCP(){
+    private void listenTCP()throws P2PBBSException{
         log.info("in fun listenTCP");
         //打开TCP端口
         ServerSocket ss;
@@ -74,47 +79,46 @@ public class Server implements Runnable{
         }catch(Exception e){
             log.warning("Failed to create socket on "+this.port);
             e.printStackTrace();
-            return;
+            throw new P2PBBSException(P2PBBSException.GETTCPSOCKETFAILED);
         }
-        try{
         while(true){//何时退出这个死循环我还没有想好
-            log.info("into while loop");
-            Socket socket=ss.accept();
-            log.info("accept "+socket.getInetAddress().getHostAddress()
+            try{
+                log.info("into while loop");
+                Socket socket=ss.accept();
+                log.info("accept "+socket.getInetAddress().getHostAddress()
                                                        +":"+socket.getPort());
-            BufferedReader in=new BufferedReader(
+                BufferedReader in=new BufferedReader(
                                 new InputStreamReader(socket.getInputStream()));
-            String head1=in.readLine();
-            log.info("get request head:"+head1);
-            String content=in.readLine();
-            String tail=in.readLine();
-            if(!(tail.equals("[END]"))){
-                log.info("protocoal tail error:"+tail);continue;
+                String head=in.readLine();
+                log.info("get request head:"+head);
+                String content=in.readLine();
+                String tail=in.readLine();
+                if(!(tail.equals("[END]"))){
+                    log.info("protocoal tail error:"+tail);continue;
+                }
+                switch(head){
+                    case("[1:RPL]")://Request Peer List
+                        replyRPL(socket);
+                        break;
+                    case("[4:RP]"):
+                        replyRP(socket,content);break;
+                }
+            }catch(Exception e){
+                e.printStackTrace();
+                log.warning("error in whlie loop");
             }
-            switch(head1){
-                case("[1:RPL]")://Request Peer List
-                    replyRPL(socket);
-                    break;
-                case("[4:RP]"):
-                    replyRP(socket,content);break;
-            }
-        }}catch(Exception e){
-            e.printStackTrace();
-            log.warning("Server quit while loop");
         }
     }
 
     /**监听UDP端口的Server,用于处理与泛洪法相关的数据报*/
-    private void listenUDP(){
-        log.info("in function listenUDP");
+    private void listenUDP()throws P2PBBSException{
         DatagramPacket datagramPacket = new DatagramPacket(new byte[MAX_UDP_MESSAGE_LENGTH], MAX_UDP_MESSAGE_LENGTH);
         DatagramSocket datagramSocket;
         try{
             datagramSocket = new DatagramSocket(this.port);
         }catch (Exception e){
             e.printStackTrace();
-            log.info("Exception caught in create udp socket: "+e.getMessage());
-            return;
+            throw new P2PBBSException(P2PBBSException.GETUDPSOCKETFAILED);
         }
         while (true){
             try{
@@ -123,6 +127,7 @@ public class Server implements Runnable{
                 String datagramString = new String(datagramPacket.getData(),0,datagramPacket.getLength());
                 log.info(String.format("Server received message from %s:%d\n%s",
                                                  datagramPacket.getAddress(),datagramPacket.getPort(),datagramString));
+                log.info(datagramPacket.getAddress().getHostAddress());
                 String[] datagramStringArray=datagramString.split("\r\n");
                 String head=datagramStringArray[0];
                 String body=datagramStringArray[1];
@@ -139,7 +144,7 @@ public class Server implements Runnable{
     }
 
     /**发送心跳包的服务*/
-    private void sendHeartbeat(){
+    private void sendHeartbeat()throws P2PBBSException{
         log.info("in fun sendHeartbeat");
         while(true){
             try{
@@ -155,12 +160,18 @@ public class Server implements Runnable{
                 Connection c=DriverManager.getConnection("jdbc:sqlite:Datas.db");
                 Statement stmt=c.createStatement();
                 ResultSet rs=stmt.executeQuery( "SELECT * FROM PEER ORDER BY T1 DESC;");
+                stmt.close();c.close();//查询完即关闭，不要长时间占用数据库
                 while(rs.next()){
-                    iport=rs.getString("IPORT").split(":");
-                    ip=iport[0];port=Integer.parseInt(iport[1]);
+                    try{
+                        iport=rs.getString("IPORT").split(":");
+                        ip=iport[0];port=Integer.parseInt(iport[1]);
+                    }catch(ArrayIndexOutOfBoundsException e){
+                        e.printStackTrace();continue;
+                    }
                     datagramPacket=new DatagramPacket(msgByte,msgByte.length,InetAddress.getByName(ip),port);
                     datagramSocket.send(datagramPacket);
                     log.info("send "+content+"to "+rs.getString("IPORT"));
+                    log.info(datagramPacket.getAddress().getHostAddress());
                 }
             }catch(Exception e){
                 e.printStackTrace();
