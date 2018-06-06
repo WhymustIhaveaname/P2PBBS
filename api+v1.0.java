@@ -142,3 +142,11 @@ public static void sendHeartbeat(){
     }
 }
 */
+/*正则字符串处理，当笔记留着吧
+Pattern p=Pattern.compile("\\[([0-9]+?):([A-Z]+?)\\]");
+Matcher m=p.matcher(head1);
+if(m.find()){
+    byte requestMode=Integer.parseInt(m.group(1));
+    String requestModeStr=m.group(2);
+    log.info("parsed request head:["+String(requestMode)+requestModeStr+"]");
+}*/

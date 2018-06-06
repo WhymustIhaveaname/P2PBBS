@@ -50,4 +50,59 @@ public class Transmission{
         Thread t=new Thread(ser);
         t.start();
     }
+    /**获得本机ip的程序，因为网上说的靠谱的方法似乎很麻烦，先写一个在这里以后再改*/
+    public static String getMyIP()throws P2PBBSException{
+        String myip;
+        try{
+            myip=InetAddress.getLocalHost().getHostAddress();
+            return myip;
+        }catch(Exception e){
+            e.printStackTrace();
+            throw new P2PBBSException("get localhost ip failed");
+        }
+    }
+    public static InetAddress getLocalHostLANAddress(){
+        try {
+            InetAddress candidateAddress = null;
+            // 遍历所有的网络接口
+            for(Enumeration ifaces=NetworkInterface.getNetworkInterfaces();ifaces.hasMoreElements();){
+                NetworkInterface iface = (NetworkInterface) ifaces.nextElement();
+                // 在所有的接口下再遍历IP
+                for(Enumeration inetAddrs=iface.getInetAddresses();inetAddrs.hasMoreElements();){
+                    InetAddress inetAddr = (InetAddress) inetAddrs.nextElement();
+                    if(!inetAddr.isLoopbackAddress()){// 排除loopback类型地址
+                        continue;
+                    }
+                    if(inetAddr.isSiteLocalAddress()) {
+                        // 如果是site-local地址，就是它了
+                        return inetAddr;
+                    }else if(candidateAddress == null){
+                        // site-local类型的地址未被发现，先记录候选地址
+                        candidateAddress = inetAddr;
+                    }
+                }
+            }
+            if(candidateAddress != null){
+                return candidateAddress;
+            }
+            // 如果没有发现 non-loopback地址.只能用最次选的方案
+            InetAddress jdkSuppliedAddress = InetAddress.getLocalHost();
+            return jdkSuppliedAddress;
+        }catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+}
+    public static long getNetTime(){
+        long time=System.currentTimeMillis()/1000;
+        return time;
+    }
+    public static void main(String[] args){
+        try{
+            //System.out.println(Transmission.getMyIP());
+            System.out.println(Transmission.getLocalHostLANAddress().getHostAddress());
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
 }

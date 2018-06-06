@@ -186,6 +186,7 @@ public class Client implements Runnable{
         c.sendRPAux(in);
     }
 
+    
     public static void testSendUDP(String message){
         System.out.println("in testSendUDP");
         try
