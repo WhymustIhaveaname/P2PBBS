@@ -216,12 +216,26 @@ public class Client implements Runnable{
             Connection c=DriverManager.getConnection("jdbc:sqlite:Datas.db");
             Statement stmt=c.createStatement();
             ResultSet rs=stmt.executeQuery("SELECT * FROM PEER ORDER BY T1 DESC;");
+            DatagramSocket datagramSocket = new DatagramSocket();
             while(rs.next()){
                 String iport=rs.getString("IPORT");
                 String key=rs.getString("PUBKEY");
-                //用Peer(iport,key)生成peer并把UDP包发出去
+                Peer peer = new Peer(iport, key);
+                try
+                {
+                    InetAddress host = InetAddress.getByName(peer.getstrip());
+                    String message = "[2:FF]\r\n"+content+"\r\n";
+                    DatagramPacket datagramPacket = new DatagramPacket(message.getBytes(), message.length(), host, peer.getport());
+                    datagramSocket.send(datagramPacket);
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                    log.info("Exception caught in testSendUDP: "+e.getMessage());
+                }
             }
             rs.close();stmt.close();c.close();
+            datagramSocket.close();
         }catch ( Exception e ) {
             e.printStackTrace();
         }
