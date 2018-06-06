@@ -1,11 +1,13 @@
 import java.io.*;
 import java.sql.*;
+import java.util.logging.*;
 /**
     有关数据库的操作。
     @author WhyMustIHaveAName
 */
 public class DataBase{
     public String s;
+    private static Logger log=Logger.getLogger("lavasoft");
     public static void initTables(){
         try{
             Class.forName("org.sqlite.JDBC");
@@ -23,6 +25,14 @@ public class DataBase{
         }catch(Exception e){
             System.err.println(e.getClass().getName()+": "+e.getMessage());
             System.exit(0);
+        }
+    }
+    public static void delDataBase(){
+        File db=new File("Datas.db");
+        if(db.delete()){
+            log.info("del db suc");
+        }else{
+            log.warning("del db err");
         }
     }
     public static void exp1(){

@@ -67,12 +67,12 @@ public class Server implements Runnable{
 
     /**监听TCP端口的Server*/
     private void listenTCP()throws P2PBBSException{
-        log.info("in fun listenTCP");
+        //log.info("in fun listenTCP");
         //打开TCP端口
         ServerSocket ss;
         try{
             ss=new ServerSocket(this.port);
-            log.info("listening TCP on "+this.port);
+            log.info("listening on "+this.port);
         }catch(Exception e){
             log.warning("Failed to create socket on "+this.port);
             e.printStackTrace();
@@ -80,7 +80,7 @@ public class Server implements Runnable{
         }
         while(true){//何时退出这个死循环我还没有想好
             try{
-                log.info("into while loop");
+                log.info("ready to receive");
                 Socket socket=ss.accept();
                 log.info("accept "+socket.getInetAddress().getHostAddress()
                                                        +":"+socket.getPort());
@@ -91,7 +91,8 @@ public class Server implements Runnable{
                 String content=in.readLine();
                 String tail=in.readLine();
                 if(!(tail.equals("[END]"))){
-                    log.info("protocoal tail error:"+tail);continue;
+                    log.warning("protocoal tail error:"+tail);
+                    continue;
                 }
                 switch(head){
                     case("[1:RPL]")://Request Peer List
@@ -142,6 +143,7 @@ public class Server implements Runnable{
             }
         }
     }
+
     /**发送心跳包的服务*/
     private void heartbeatServer(){
         while(true){
@@ -306,7 +308,7 @@ public class Server implements Runnable{
             log.warning("body format error");
             return;
         }
-        String iport=ip+":"+body.substring(7,body.length()-1);
+        String iport=ip+":"+body.substring(6,body.length()-1);
         long Tnow=Transmission.getNetTime();
         try{
             Class.forName("org.sqlite.JDBC");
