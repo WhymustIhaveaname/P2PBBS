@@ -3,22 +3,14 @@ import java.io.*;
 public class Test{
     private static Logger log=Logger.getLogger("lavasoft");
     public static void testRPL(){
-        Transmission.listen(3334);
-        try{
-            Thread.sleep(500);
-        }catch(InterruptedException e){}
-        Transmission.requestPeerList(new Peer("127.0.0.1:3334",null));
-        try{
-            Thread.sleep(500);
-        }catch(InterruptedException e){}
-        Transmission.requestPeerList(new Peer("127.0.0.1:3334",null));
+        Transmission.listenTCP(3335);
+        Test.sleep(200);
+        Transmission.requestPeerList(new Peer("127.0.0.1:3335",null));
     }
 
     public static void testRP(){
-        Transmission.listen(3333);
-        try{
-            Thread.sleep(500);
-        }catch(InterruptedException e){}
+        Transmission.listenTCP(3333);
+        Test.sleep(200);
         Transmission.requestPost(new Peer("127.0.0.1:3333",null),0);
     }
 
@@ -58,12 +50,12 @@ public class Test{
     }
     public static void main(String args[]){
         //Test.testRPL();
-        //Test.testRP();
+        Test.testRP();
         //Test.testReceiveUDP();
         //Test.testHB();
         //Test.startUDP();
-        Test.startUDP();
-        Test.sleep(200);
-        Test.startHBS();
+        //Test.startUDP();
+        //Test.sleep(200);
+        //Test.startHBS();
     }
 }

@@ -32,55 +32,75 @@ public class Client implements Runnable{
     public void run(){
         switch(this.type){
             case(Protocal.RPL):
-                sendRPL();
+                try{
+                    sendRPL();
+                }catch(Exception e){
+                    e.printStackTrace();
+                }finally{
+                    break;
+                }
             case(Protocal.RP):
                 sendRP();
             case(Protocal.FF):
                 sendFF();
         }
     }
+
     /**发送请求节点列表的请求，等待返回，更新数据库
        使用前不需要初始化content*/
-    private void sendRPL(){
+    private void sendRPL()throws P2PBBSException{
         this.content="[]";
         Socket socket;
         try{
             socket=new Socket(this.dst.getstrip(),this.dst.getport());
         }catch(Exception e){
             log.warning("Create socket failed");
-            e.printStackTrace();return;
+            e.printStackTrace();
+            throw new P2PBBSException(P2PBBSException.GETTCPSOCKETFAILED);
         }
         try{
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             PrintWriter out=new PrintWriter(socket.getOutputStream(),true);
-            out.println(String.format("%s%s%s",Protocal.genHead(this.type),this.content,Protocal.genTail(this.type)));
+            String temp=String.format("%s%s%s",Protocal.genHead(this.type),this.content,Protocal.genTail(this.type));
+            out.println(temp);
             out.flush();
-            log.info("request has send.waiting for server's reply");
+            log.info("sent\n"+temp);
             sendRPLAux(in);
             out.close();//out.close一定要放在后面，因为close时会释放socket导致in不可用
             in.close();
         }catch(Exception e){
             e.printStackTrace();
+            throw new P2PBBSException(P2PBBSException.TCPTRANSERROR);
         }
     }
+
     /**sendRPL中用于处理返回的函数*/
-    private void sendRPLAux(BufferedReader in){
+    private void sendRPLAux(BufferedReader in)throws P2PBBSException{
         try{
-            //检查头部
-            Protocal.confirmHead(in.readLine(),Protocal.RPLR);
             StringBuilder contentBuilder=new StringBuilder();
             String temp;
             while((temp=in.readLine())!=null){
                 contentBuilder.append(temp);
             }
             String content=contentBuilder.toString();
-            log.info("get server's reply\n"+content);
-            //检查尾部
-            if(!content.endsWith(",][END]")){
-                throw new P2PBBSException("Tail error");
+            log.info("get reply\n"+content);
+            //检查头尾
+            if(!content.startsWith(Protocal.PHSTR[Protocal.RPLR])){
+                throw new P2PBBSException("Head error");
             }
-            //把头和尾截掉
-            content=content.substring(2,content.length()-8);
+            if(!content.endsWith(",][END]")){
+                if(!content.endsWith("][END]")){
+                    throw new P2PBBSException("Tail error");
+                }else{
+                    content=content.substring(10,content.length()-5);
+                    content+=String.format("%s:%d,%d",this.dst.getstrip(),this.dst.getport(),Transmission.getNetTime());
+                }
+            }else{
+                content=content.substring(10,content.length()-8);
+                content+=String.format("],[%s:%d,%d",this.dst.getstrip(),this.dst.getport(),Transmission.getNetTime());
+            }
+
+            log.info("content:"+content);
             //打开数据库
             Class.forName("org.sqlite.JDBC");
             Connection conn=DriverManager.getConnection("jdbc:sqlite:Datas.db");
@@ -89,14 +109,19 @@ public class Client implements Runnable{
             for(String i:content.split("\\],\\[")){
                 log.info("saving "+i);
                 String[] j=i.split(",");
-                preStat.setString(1,j[0]);
-                preStat.setString(2,j[1]);
-                preStat.setLong(3,Long.parseLong(j[2]));
+                try{
+                    preStat.setString(1,j[0]);
+                    preStat.setLong(3,Long.parseLong(j[1]));
+                }catch(Exception e){
+                    e.printStackTrace();
+                    continue;
+                }
+
                 try{
                     preStat.executeUpdate();
                     preStat.clearParameters();
                 }catch(org.sqlite.SQLiteException e){
-                    log.info("peer has exist");
+                    //log.info("peer has exist");
                     preStat=conn.prepareStatement(s);
                 }
             }
@@ -105,17 +130,22 @@ public class Client implements Runnable{
             e.printStackTrace();
         }
     }
+
     /**测试sendRPLAux功能的函数*/
     public static void testSendRPLAux(){
         Client c=new Client((byte)1);
         String s="[5:RPLR]\r\n[[0.0.0.0:3333,null,12335],[1.1.1.1:4444,null,123456],]\r\n[END]";
         BufferedReader in=new BufferedReader(new StringReader(s));
-        c.sendRPLAux(in);
+        try{
+            c.sendRPLAux(in);
+        }catch(Exception e){
+            e.printStackTrace();
+        }
     }
-    /**发送请求帖子请求，等待返回，更新数据库
-       请求什么时间之后的那个时间是在Transmission中setContent时指定的*/
+
+    /**发送请求帖子请求，等待返回，更新数据库*/
     private void sendRP(){
-        this.content=String.format("[BEFORE:%d]",System.currentTimeMillis()/1000);
+        this.content=String.format("[BEFORE:%d]",0);
         Socket socket;
         try{
             socket=new Socket(this.dst.getstrip(),this.dst.getport());
@@ -186,7 +216,7 @@ public class Client implements Runnable{
         c.sendRPAux(in);
     }
 
-    
+
     public static void testSendUDP(String message){
         System.out.println("in testSendUDP");
         try
@@ -216,12 +246,26 @@ public class Client implements Runnable{
             Connection c=DriverManager.getConnection("jdbc:sqlite:Datas.db");
             Statement stmt=c.createStatement();
             ResultSet rs=stmt.executeQuery("SELECT * FROM PEER ORDER BY T1 DESC;");
+            DatagramSocket datagramSocket = new DatagramSocket();
             while(rs.next()){
                 String iport=rs.getString("IPORT");
                 String key=rs.getString("PUBKEY");
-                //用Peer(iport,key)生成peer并把UDP包发出去
+                Peer peer = new Peer(iport, key);
+                try
+                {
+                    InetAddress host = InetAddress.getByName(peer.getstrip());
+                    String message = "[2:FF]\r\n"+content+"\r\n";
+                    DatagramPacket datagramPacket = new DatagramPacket(message.getBytes(), message.length(), host, peer.getport());
+                    datagramSocket.send(datagramPacket);
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
+                    log.info("Exception caught in testSendUDP: "+e.getMessage());
+                }
             }
             rs.close();stmt.close();c.close();
+            datagramSocket.close();
         }catch ( Exception e ) {
             e.printStackTrace();
         }
