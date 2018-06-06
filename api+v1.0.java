@@ -47,7 +47,7 @@
     太多时间，所以也在循环监听内部解决。
     3.心跳包
         编号：3,字符串：HB，协议body：
-        [IPORT:"x.x.x.x:x",BEATAT:TimeStramp]
+        [PORT:xxxx]
         用UDP向所有已知节点发送心跳包，行为要模仿udp访问百度的行为。
         为了补充这种心跳包方法的不足，还要辅以一个节点信息更新协议。
     4.泛洪法发送Post
@@ -149,4 +149,6 @@ if(m.find()){
     byte requestMode=Integer.parseInt(m.group(1));
     String requestModeStr=m.group(2);
     log.info("parsed request head:["+String(requestMode)+requestModeStr+"]");
-}*/
+}
+用String.matches也可以
+*/
