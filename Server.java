@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.*;
 import java.sql.*;
 import java.util.logging.*;
+import java.util.*;
 //test
 /**
     作为服务器的类，监听tcp或udp端口，处理请求并返回。应作为后台进程一直开着。
@@ -24,7 +25,7 @@ public class Server implements Runnable{
     /**UDP通信时接受的最大消息长度（字节数）*/
     public static final int MAX_UDP_MESSAGE_LENGTH = 65536;
     /**发送心跳包的间隔*/
-    public static int HBINTERVAL=10000;
+    public static int HEARTBEATINTERVAL=1000;
     /**一个Logger*/
     private static Logger log=Logger.getLogger("lavasoft");
     /**制定这个服务器处于哪种模式,1是TCP，2是UDP*/
@@ -59,11 +60,7 @@ public class Server implements Runnable{
                 }
                 break;
             case(Server.HEARTBEATSERVER):
-                try{
-                    sendHeartbeat();
-                }catch(P2PBBSException e){
-                    e.printStackTrace();
-                }
+                heartbeatServer();
                 break;
         }
     }
@@ -122,19 +119,22 @@ public class Server implements Runnable{
         }
         while (true){
             try{
-                log.info("udp wait to receive");
+                log.info("ready to receive");
                 datagramSocket.receive(datagramPacket);
+                String fromip=datagramPacket.getAddress().getHostAddress();
                 String datagramString = new String(datagramPacket.getData(),0,datagramPacket.getLength());
                 log.info(String.format("Server received message from %s:%d\n%s",
-                                                 datagramPacket.getAddress(),datagramPacket.getPort(),datagramString));
-                log.info(datagramPacket.getAddress().getHostAddress());
+                                  fromip,datagramPacket.getPort(),datagramString));
                 String[] datagramStringArray=datagramString.split("\r\n");
                 String head=datagramStringArray[0];
                 String body=datagramStringArray[1];
-                String tail=datagramStringArray[2];
+                if(!(datagramStringArray[2].equals("[END]"))){
+                    log.info("tail error");
+                    continue;
+                }
                 switch(head){
                     case("[3:HB]"):
-                        dealHB(body);break;
+                        dealHB(body,fromip);break;
                 }
             }catch (Exception e){
                 e.printStackTrace();
@@ -142,46 +142,71 @@ public class Server implements Runnable{
             }
         }
     }
-
     /**发送心跳包的服务*/
-    private void sendHeartbeat()throws P2PBBSException{
-        log.info("in fun sendHeartbeat");
+    private void heartbeatServer(){
         while(true){
+            log.info("I wake up!");
             try{
-                String content=String.format("[%s:%d]",Transmission.getMyIP(),this.port);
-                String msg=String.format("%s%s%s",Protocal.genHead(Protocal.HB),content,
-                                                       Protocal.genTail(Protocal.HB));
-                byte[] msgByte=msg.getBytes();
-                String[] iport;String ip;int port;
-                DatagramPacket datagramPacket;
-
-                DatagramSocket datagramSocket=new DatagramSocket();
-                Class.forName("org.sqlite.JDBC");
-                Connection c=DriverManager.getConnection("jdbc:sqlite:Datas.db");
-                Statement stmt=c.createStatement();
-                ResultSet rs=stmt.executeQuery( "SELECT * FROM PEER ORDER BY T1 DESC;");
-                stmt.close();c.close();//查询完即关闭，不要长时间占用数据库
-                while(rs.next()){
-                    try{
-                        iport=rs.getString("IPORT").split(":");
-                        ip=iport[0];port=Integer.parseInt(iport[1]);
-                    }catch(ArrayIndexOutOfBoundsException e){
-                        e.printStackTrace();continue;
-                    }
-                    datagramPacket=new DatagramPacket(msgByte,msgByte.length,InetAddress.getByName(ip),port);
-                    datagramSocket.send(datagramPacket);
-                    log.info("send "+content+"to "+rs.getString("IPORT"));
-                    log.info(datagramPacket.getAddress().getHostAddress());
-                }
+                sendHeartbeat();
             }catch(Exception e){
                 e.printStackTrace();
             }finally{
                 try{
-                    Thread.sleep(Server.HBINTERVAL);
+                    log.info("I am going to sleep for "+Integer.toString(Server.HEARTBEATINTERVAL)+"ms");
+                    Thread.sleep(Server.HEARTBEATINTERVAL);
                 }catch(Exception e){
                     e.printStackTrace();
                 }
             }
+        }
+    }
+
+    /**发送一次心跳包的服务*/
+    private void sendHeartbeat()throws P2PBBSException{
+        //准备内容
+        String content=String.format("[PORT:%d]",this.port);
+        String msg=Protocal.genHead(Protocal.HB)+content+Protocal.genTail(Protocal.HB);
+        byte[] msgByte=msg.getBytes();
+        //获得UDP套接字
+        DatagramSocket datagramSocket;
+        try{
+            datagramSocket=new DatagramSocket();
+        }catch(Exception e){
+            e.printStackTrace();
+            throw new P2PBBSException(P2PBBSException.GETUDPSOCKETFAILED);
+        }
+        //从数据库中读出目的地
+        List<String> iports=new ArrayList<String>();
+        try{
+            Class.forName("org.sqlite.JDBC");
+            Connection c=DriverManager.getConnection("jdbc:sqlite:Datas.db");
+            Statement stmt=c.createStatement();
+            ResultSet rs=stmt.executeQuery( "SELECT * FROM PEER ORDER BY T1 DESC;");
+            while(rs.next()){
+                iports.add(rs.getString("IPORT"));
+            }
+            rs.close();stmt.close();c.close();
+        }catch(Exception e){
+            e.printStackTrace();
+            throw new P2PBBSException(P2PBBSException.DBERROR+e.getMessage());
+        }
+        //发送
+        for(String iport:iports){
+            //log.info("get "+iport);
+            String[] iport_temp=iport.split(":");
+            try{
+                log.info("sending \n"+msg+"\nto "+iport);
+                String ip=iport_temp[0];
+                int port=Integer.parseInt(iport_temp[1]);
+                DatagramPacket datagramPacket=new DatagramPacket(msgByte,msgByte.length,InetAddress.getByName(ip),port);
+                datagramSocket.send(datagramPacket);
+            }catch(Exception e){
+                e.printStackTrace();continue;
+            }
+        }
+        //擦屁股
+        if(datagramSocket!=null){
+            datagramSocket.close();
         }
     }
 
@@ -276,12 +301,12 @@ public class Server implements Runnable{
     }
 
     /**处理心跳包*/
-    private static void dealHB(String body){
-        if(body.charAt(0)!='[' || body.charAt(body.length()-1)!=']'){
-            log.info("body format error");
+    private static void dealHB(String body,String ip){
+        if(!(body.matches("\\[PORT:[0-9]+\\]"))){
+            log.warning("body format error");
             return;
         }
-        String iport=body.substring(1,body.length()-1);
+        String iport=ip+":"+body.substring(7,body.length()-1);
         long Tnow=Transmission.getNetTime();
         try{
             Class.forName("org.sqlite.JDBC");
@@ -293,6 +318,7 @@ public class Server implements Runnable{
             if(rs.next()){
                 long T1=rs.getLong("T1");
                 long T2=rs.getLong("T2");
+                if(!checkT(Tnow,T1,T2)){return;}
                 String s2="UPDATE PEER SET T1=?,T2=?,T3=? WHERE IPORT=?;";
                 PreparedStatement preStat2=conn.prepareStatement(s2);
                 preStat2.setLong(1,Tnow);
@@ -317,9 +343,18 @@ public class Server implements Runnable{
         }
     }
 
+    /**dealHB中用于检验三个时间合理性的函数，还要再改*/
+    private static boolean checkT(long Tnow,long T1,long T2){
+        if(Tnow<T1){
+            return false;
+        }else{
+            return true;
+        }
+    }
+
     /**测试dealHeartbeat*/
     public static void testDealHB(){
-        Server.dealHB("[10.2.149.191:3333]");
+        Server.dealHB("[PORT:3333]","127.0.0.1");
     }
 
     /**主函数*/
