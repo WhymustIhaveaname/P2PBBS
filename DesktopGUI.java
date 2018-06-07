@@ -3,9 +3,10 @@ import java.awt.event.*;
 import javax.swing.plaf.basic.BasicButtonListener;
 import java.util.logging.*;
 import java.sql.*;
-public class DesktopGUI implements MouseListener{
+import javax.swing.*;
+public class DesktopGUI implements MouseListener,Runnable{
     private Frame F;
-    private Panel Pnorth,Pwest,Pcenter,Pnorth1,Pnorth2,Pnorth3;
+    private Panel Pnorth,Pwest,Pcenter,Pnorth1,Pnorth2,Pnorth3,Pnorth4;;
     private Button Binit,Bdel;
     private Button Btcp,Budp,Bhb,Bviewposts,Bviewpeers;
     private Button Brpl,Brp,Bpost;
@@ -13,14 +14,16 @@ public class DesktopGUI implements MouseListener{
     private TextArea TA;
     private TextField TF,TFPeer;
     private static Logger Log=Logger.getLogger("lavasoft");
+    private byte TAFlag=0;
     private void initLayout(){
         F=new Frame("P2PBBS Desktop");
-        Pnorth=new Panel(new GridLayout(4,1));
+        Pnorth=new Panel(new GridLayout(5,1));
         Pwest=new Panel(new GridLayout(10,1));
         Pcenter=new Panel();
         Pnorth1=new Panel(new FlowLayout());
         Pnorth2=new Panel(new FlowLayout());
         Pnorth3=new Panel(new FlowLayout());
+        Pnorth4=new Panel(new FlowLayout());
         Binit=new Button("Init DB");
         Bdel=new Button("Del DB");
         Btcp=new Button("Start TCP server");
@@ -30,6 +33,7 @@ public class DesktopGUI implements MouseListener{
         Bviewpeers=new Button("View peers");
         Brpl=new Button("Request peer list");
         Brp=new Button("Request Post");
+        Bpost=new Button("Post");
         Lportnum=new Label();
         Lportnum.setText("Port:");
         Lpeernum=new Label();
@@ -50,10 +54,12 @@ public class DesktopGUI implements MouseListener{
         Pnorth3.add(Btcp);
         Pnorth3.add(Budp);
         Pnorth3.add(Bhb);
+        Pnorth4.add(Bpost);
+        Pnorth4.add(Lpeernum);
         Pnorth.add(Pnorth1);
         Pnorth.add(Pnorth2);
         Pnorth.add(Pnorth3);
-        Pnorth.add(Lpeernum);
+        Pnorth.add(Pnorth4);
         Pwest.add(Bviewposts);
         Pwest.add(Bviewpeers);
         Pcenter.add(TA);
@@ -80,6 +86,7 @@ public class DesktopGUI implements MouseListener{
         Bdel.addMouseListener(this);
         Brpl.addMouseListener(this);
         Brp.addMouseListener(this);
+        Bpost.addMouseListener(this);
     }
     @Override
     public void mouseClicked(MouseEvent e){
@@ -95,33 +102,46 @@ public class DesktopGUI implements MouseListener{
             case("Start HB server"):
                 startHBServer(Btemp);break;
             case("View posts"):
-                showPost();break;
+                TAFlag=0;
+                showPost();
+                break;
             case("View peers"):
-                showPeer();break;
+                TAFlag=1;
+                showPeer();
+                break;
             case("Request peer list"):
-                //Log.info(TFPeer.getText());
                 Transmission.requestPeerList(new Peer(TFPeer.getText(),null));
                 break;
             case("Request Post"):
+                Transmission.requestPost(new Peer(TFPeer.getText(),null),0);
                 break;
             case("Init DB"):
                 DataBase.initTables();break;
             case("Del DB"):
                 DataBase.delDataBase();break;
+            case("Post"):
+                PostWindow PW=new PostWindow();
+                PW.init();
+                break;
         }
     }
     private void startTCPServer(Button B){
         int port=Integer.parseInt(TF.getText());
+        TF.setEditable(false);
         Transmission.listenTCP(port);
-        B.setLabel("TCP server has been started");
+        B.setLabel("TCP port:"+Integer.toString(port));
     }
     private void startUDPServer(Button B){
-        Transmission.listenUDP(3333);
-        B.setLabel("UDP server has been started");
+        int port=Integer.parseInt(TF.getText());
+        TF.setEditable(false);
+        Transmission.listenUDP(port);
+        B.setLabel("UDP port:"+Integer.toString(port));
     }
     private void startHBServer(Button B){
-        Transmission.sendHB(3333);
-        B.setLabel("HB server has been started");
+        int port=Integer.parseInt(TF.getText());
+        TF.setEditable(false);
+        Transmission.sendHB(port);
+        B.setLabel("HB port:"+Integer.toString(port));
     }
     private void showPost(){
         StringBuilder Sb=new StringBuilder();
@@ -138,6 +158,7 @@ public class DesktopGUI implements MouseListener{
                 String apost=String.format("%010d %010d %010d\n%s\n",time,hash,phash,rs.getString("CONTENT"));
                 Sb.append(apost);
             }
+            rs.close();preStat.close();conn.close();
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -158,14 +179,39 @@ public class DesktopGUI implements MouseListener{
                 String apost=String.format("%s %010d %010d %010d\n",rs.getString("IPORT"),t1,t2,t3);
                 Sb.append(apost);
             }
+            rs.close();preStat.close();conn.close();
         }catch(Exception e){
             e.printStackTrace();
         }
         TA.setText(Sb.toString());
     }
-    private void startRPL(){
-
+    public void run(){
+        while(true){
+            try{
+                Class.forName("org.sqlite.JDBC");
+                Connection conn = DriverManager.getConnection("jdbc:sqlite:Datas.db");
+                String s="SELECT COUNT(*) AS NUM FROM(SELECT * FROM PEER WHERE T1>?);";
+                PreparedStatement preStat=conn.prepareStatement(s);
+                preStat.setLong(1,Transmission.getNetTime()-10*60);
+                ResultSet rs=preStat.executeQuery();
+                int n1=rs.getInt("NUM");
+                rs.close();preStat.close();conn.close();
+                Lpeernum.setText(String.format("online peer num:%d",n1));
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+            switch(TAFlag){
+                case 0:showPost();break;
+                case 1:showPeer();break;
+            }
+            try{
+                Thread.sleep(1000);
+            }catch(Exception e){
+                e.printStackTrace();
+            }
+        }
     }
+
     @Override
     public void mouseEntered(MouseEvent e){
         //Log.info(e.paramString());
@@ -186,5 +232,34 @@ public class DesktopGUI implements MouseListener{
         DesktopGUI D=new DesktopGUI();
         D.initLayout();
         D.initListener();
+        Thread t=new Thread(D);
+        t.start();
+        PostWindow PW=new PostWindow();
+        //PW.init();
     }
+}
+class PostWindow{
+    private Frame F;
+    private JTextArea JTA;
+    private Button Bp;
+    private Panel P;
+    public void init(){
+        F=new Frame("Post");
+        P=new Panel(new GridLayout(10,1));
+        JTA=new JTextArea(16,40);
+        Bp=new Button("Post");
+        P.add(Bp);
+        F.add(P,BorderLayout.EAST);
+        F.add(JTA,BorderLayout.WEST);
+        F.pack();
+        F.setVisible(true);
+        F.addWindowListener(new WindowAdapter(){
+            @Override
+            public void windowClosing(WindowEvent e){
+                F.dispose();
+            }
+        });
+    }
+
+
 }

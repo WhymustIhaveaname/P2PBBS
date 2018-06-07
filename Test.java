@@ -50,9 +50,9 @@ public class Test{
     }
     public static void main(String args[]){
         //Test.testRPL();
-        Test.testRP();
+        //Test.testRP();
         //Test.testReceiveUDP();
-        //Test.testHB();
+        Test.testHB();
         //Test.startUDP();
         //Test.startUDP();
         //Test.sleep(200);
