@@ -155,9 +155,10 @@ public class Client implements Runnable{
         }
         try{
             PrintWriter out=new PrintWriter(socket.getOutputStream(),true);
-            out.println(String.format("%s%s%s",Protocal.genHead(this.type),this.content,Protocal.genTail(this.type)));
+            String TempStr=String.format("%s%s%s",Protocal.genHead(this.type),this.content,Protocal.genTail(this.type));
+            out.println(TempStr);
             out.flush();
-            log.info("request has send.waiting for server's reply");
+            log.info("sent\n"+TempStr);
             BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             sendRPAux(in);
             out.close();
@@ -180,10 +181,16 @@ public class Client implements Runnable{
             log.info("get server's reply\n"+reply);
             //检查尾部
             if(!(reply.endsWith(",][END]"))){
-                throw new P2PBBSException("Tail error");
+                if(!(reply.endsWith("[END]"))){
+                    throw new P2PBBSException("Tail error");
+                }else{
+                    log.info("empty reply");
+                    return;
+                }
+            }else{
+                //把头和尾截掉
+                reply=reply.substring(2,reply.length()-8);
             }
-            //把头和尾截掉
-            reply=reply.substring(2,reply.length()-8);
             //打开数据库
             Class.forName("org.sqlite.JDBC");
             Connection conn=DriverManager.getConnection("jdbc:sqlite:Datas.db");

@@ -25,7 +25,7 @@ public class Server implements Runnable{
     /**UDP通信时接受的最大消息长度（字节数）*/
     public static final int MAX_UDP_MESSAGE_LENGTH = 65536;
     /**发送心跳包的间隔*/
-    public static int HEARTBEATINTERVAL=1000;
+    public static int HEARTBEATINTERVAL=10000;
     /**一个Logger*/
     private static Logger log=Logger.getLogger("lavasoft");
     /**制定这个服务器处于哪种模式,1是TCP，2是UDP*/
@@ -99,7 +99,8 @@ public class Server implements Runnable{
                         replyRPL(socket);
                         break;
                     case("[4:RP]"):
-                        replyRP(socket,content);break;
+                        replyRP(socket,content);
+                        break;
                 }
             }catch(Exception e){
                 e.printStackTrace();
@@ -197,7 +198,7 @@ public class Server implements Runnable{
             //log.info("get "+iport);
             String[] iport_temp=iport.split(":");
             try{
-                log.info("sending \n"+msg+"\nto "+iport);
+                log.info("sending "+msg+" to "+iport);
                 String ip=iport_temp[0];
                 int port=Integer.parseInt(iport_temp[1]);
                 DatagramPacket datagramPacket=new DatagramPacket(msgByte,msgByte.length,InetAddress.getByName(ip),port);
@@ -270,6 +271,7 @@ public class Server implements Runnable{
             PreparedStatement preStat=conn.prepareStatement(s);
             preStat.setLong(1,theT);
             ResultSet rs = preStat.executeQuery();
+            //这里写得不好，有时间要改
             while(rs.next()){
                 long time=rs.getLong("TIME");
                 int hash=rs.getInt("HASH");
@@ -280,7 +282,7 @@ public class Server implements Runnable{
             }
             rs.close();preStat.close();conn.close();
         }catch ( Exception e ) {
-            System.err.println(e.getClass().getName()+": "+e.getMessage());
+            e.printStackTrace();
         }
         replyBuilder.append("]");
         replyBuilder.append(Protocal.genTail(Protocal.RPR));
@@ -290,7 +292,8 @@ public class Server implements Runnable{
         try{
             PrintWriter out = new PrintWriter(socket.getOutputStream(),true);
             out.print(reply);
-            out.flush();out.close();
+            out.flush();
+            out.close();
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -339,7 +342,8 @@ public class Server implements Runnable{
                 preStat2.close();
                 log.info("inserted "+iport);
             }
-            rs.close();preStat.close();conn.close();
+            rs.close();preStat.close();
+            conn.close();
         }catch(Exception e){
             e.printStackTrace();
         }
