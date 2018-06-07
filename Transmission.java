@@ -72,7 +72,6 @@ public class Transmission{
 
     public static void main(String[] args){
         try{
-            System.out.println(Transmission.getMyIP());
             //System.out.println(Transmission.getLocalHostLANAddress().getHostAddress());
         }catch(Exception e){
             e.printStackTrace();

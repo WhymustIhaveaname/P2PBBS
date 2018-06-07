@@ -238,11 +238,12 @@ public class DesktopGUI implements MouseListener,Runnable{
         //PW.init();
     }
 }
-class PostWindow{
+class PostWindow implements MouseListener{
     private Frame F;
     private JTextArea JTA;
     private Button Bp;
     private Panel P;
+    private static Logger Log=Logger.getLogger("lavasoft");
     public void init(){
         F=new Frame("Post");
         P=new Panel(new GridLayout(10,1));
@@ -259,7 +260,32 @@ class PostWindow{
                 F.dispose();
             }
         });
+        Bp.addMouseListener(this);
+    }
+    @Override
+    public void mouseClicked(MouseEvent e){
+        Button Btemp=(Button)e.getSource();
+        String label=Btemp.getLabel();
+        Post aPost=new Post(Transmission.getNetTime(),JTA.getText());
+        Log.info("gen post:"+aPost.toString());
+        Transmission.floodfill(aPost.toString());
     }
 
+    @Override
+    public void mouseEntered(MouseEvent e){
+        //Log.info(e.paramString());
+    }
+    @Override
+    public void mouseExited(MouseEvent e){
+        //Log.info(e.paramString());
+    }
+    @Override
+    public void mousePressed(MouseEvent e){
+        //Log.info(e.paramString());
+    }
+    @Override
+    public void mouseReleased(MouseEvent e){
+        //Log.info(e.paramString());
+    }
 
 }
