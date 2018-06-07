@@ -133,6 +133,8 @@ public class Server implements Runnable{
                     continue;
                 }
                 switch(head){
+                    case("[2:FF]"):
+                        dealFF(body);break;
                     case("[3:HB]"):
                         dealHB(body,fromip);break;
                 }
@@ -274,7 +276,7 @@ public class Server implements Runnable{
                 int phash=rs.getInt("PHASH");
                 String con=rs.getString("CONTENT");
                 replyBuilder.append(String.format("[%d,%d,%d,%s],",time,
-                                 hash,phash,con.replace(',',Post.DOUHAO)));
+                                 hash,phash,Post.escape(con)));
             }
             rs.close();preStat.close();conn.close();
         }catch ( Exception e ) {
@@ -295,9 +297,64 @@ public class Server implements Runnable{
     }
 
     /**处理泛洪法发送帖子*/
-    private void dealFF(){
-        //读入帖子，查看是否已经收到过
-        //如果没收到过，调用Transmission.floodfill();
+    private static void dealFF(String body)
+    {
+        if (body.charAt(0) != '[' || body.charAt(body.length()-1) != ']')
+        {
+            log.warning("dealFF: body not enveloped by []");
+            return;
+        }
+        String[] bodyArray = body.substring(1,body.length()-1).split(",");
+        if (bodyArray.length != 4)
+        {
+            log.warning("dealFF: bodyArray length not equals to 4");
+            return;
+        }
+        
+        Connection connection = null;
+        PreparedStatement preparedStatement = null;
+        try
+        {
+            int hashInt = Integer.parseInt(bodyArray[1]);
+            Class.forName("org.sqlite.JDBC");
+            connection = DriverManager.getConnection("jdbc:sqlite:Datas.db");
+            preparedStatement = connection.prepareStatement("SELECT * FROM POST WHERE HASH=?;");
+            preparedStatement.setInt(1, hashInt);
+            ResultSet resultSet = preparedStatement.executeQuery();
+            if (!resultSet.next()) // 如果数据库中没有找到帖子，则存入数据库并继续泛洪
+            {
+                preparedStatement = connection.prepareStatement("INSERT INTO POST(TIME,HASH,PHASH,CONTENT) VALUES(?,?,?,?);");
+                preparedStatement.setLong(1, Long.parseLong(bodyArray[0]));
+                preparedStatement.setInt(2, Integer.parseInt(bodyArray[1]));
+                preparedStatement.setInt(3, Integer.parseInt(bodyArray[2]));
+                preparedStatement.setString(4, Post.reverseEscape(bodyArray[3]));
+                preparedStatement.executeUpdate();
+                preparedStatement.clearParameters();
+                Transmission.floodfill(body);                
+            }
+            else
+            {
+                log.info("post "+body+" exists");
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            log.warning("dealFF: exception occured");
+        }
+        finally
+        {
+            try
+            {
+                if (preparedStatement != null) preparedStatement.close();
+                if (connection != null) connection.close();
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+                log.warning("dealFF: exception occured while closing");
+            }
+        }
     }
 
     /**处理心跳包*/
@@ -356,10 +413,19 @@ public class Server implements Runnable{
     public static void testDealHB(){
         Server.dealHB("[PORT:3333]","127.0.0.1");
     }
+    
+    /**测试dealFF*/
+    public static void testDealFF()
+    {
+        //[时间,哈希,父哈希,内容]
+        Server.dealFF("[1111,555,555,hi_5]");
+    }
 
     /**主函数*/
     public static void main(String[] args){
-        Server.testDealHB();
+        //DataBase.initTables();
+        //Server.testDealHB();
+        Server.testDealFF();
     }
 
     public void setMode(byte m){
