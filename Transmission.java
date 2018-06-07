@@ -38,9 +38,9 @@ public class Transmission{
         t.start();
     }
     /**泛洪法发送帖子*/
-    public static void floodfill(Post p){
+    public static void floodfill(String postString){
         Client g=new Client(Protocal.FF);
-        g.setContent(p.toString());
+        g.setContent(postString);
         Thread t=new Thread(g);
         t.start();
     }
@@ -71,6 +71,11 @@ public class Transmission{
     }
 
     public static void main(String[] args){
-
+        try{
+            //System.out.println(Transmission.getMyIP());
+            //System.out.println(Transmission.getLocalHostLANAddress().getHostAddress());
+        }catch(Exception e){
+            e.printStackTrace();
+        }
     }
 }

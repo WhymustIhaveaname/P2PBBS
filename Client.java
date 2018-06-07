@@ -202,7 +202,7 @@ public class Client implements Runnable{
                 preStat.setLong(1,Long.parseLong(j[0]));
                 preStat.setInt(2,Integer.parseInt(j[1]));
                 preStat.setInt(3,Integer.parseInt(j[2]));
-                preStat.setString(4,j[3].replace(Post.DOUHAO,','));
+                preStat.setString(4, Post.reverseEscape(j[3]));
                 try{
                     preStat.executeUpdate();
                     preStat.clearParameters();
