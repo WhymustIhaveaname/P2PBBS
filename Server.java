@@ -128,17 +128,17 @@ public class Server implements Runnable{
                 log.info(String.format("Server received message from %s:%d\n%s",
                                   fromip,datagramPacket.getPort(),datagramString));
                 String[] datagramStringArray=datagramString.split("\r\n");
-                String head=datagramStringArray[0];
-                String body=datagramStringArray[1];
+                String packetHead = datagramStringArray[0];
+                String packetBody = datagramStringArray[1];
                 if(!(datagramStringArray[2].equals("[END]"))){
                     log.info("tail error");
                     continue;
                 }
-                switch(head){
+                switch(packetHead){
                     case("[2:FF]"):
-                        dealFF(body);break;
+                        dealFF(packetBody);break;
                     case("[3:HB]"):
-                        dealHB(body,fromip);break;
+                        dealHB(packetBody,fromip);break;
                 }
             }catch (Exception e){
                 e.printStackTrace();
@@ -302,63 +302,32 @@ public class Server implements Runnable{
     }
 
     /**处理泛洪法发送帖子*/
-    private static void dealFF(String body)
+    private static void dealFF(String packetBody)
     {
-        if (body.charAt(0) != '[' || body.charAt(body.length()-1) != ']')
+        if (packetBody.charAt(0) != '[' || packetBody.charAt(packetBody.length()-1) != ']')
         {
-            log.warning("dealFF: body not enveloped by []");
+            log.warning("packetBody not enveloped by []");
             return;
         }
-        String[] bodyArray = body.substring(1,body.length()-1).split(",");
-        if (bodyArray.length != 4)
+        String[] packetBodySplit = packetBody.substring(1, packetBody.length()-1).split(",");
+        if (packetBodySplit.length != 4)
         {
-            log.warning("dealFF: bodyArray length not equals to 4");
+            log.warning("packetBodySplit length not equals to 4");
             return;
         }
-        
-        Connection connection = null;
-        PreparedStatement preparedStatement = null;
         try
         {
-            int hashInt = Integer.parseInt(bodyArray[1]);
-            Class.forName("org.sqlite.JDBC");
-            connection = DriverManager.getConnection("jdbc:sqlite:Datas.db");
-            preparedStatement = connection.prepareStatement("SELECT * FROM POST WHERE HASH=?;");
-            preparedStatement.setInt(1, hashInt);
-            ResultSet resultSet = preparedStatement.executeQuery();
-            if (!resultSet.next()) // 如果数据库中没有找到帖子，则存入数据库并继续泛洪
+            Post post = new Post(Long.parseLong(packetBodySplit[0]), Post.reverseEscape(packetBodySplit[3]), Integer.parseInt(packetBodySplit[2]));
+            if (post.hashCode() != Integer.parseInt(packetBodySplit[1]))
             {
-                preparedStatement = connection.prepareStatement("INSERT INTO POST(TIME,HASH,PHASH,CONTENT) VALUES(?,?,?,?);");
-                preparedStatement.setLong(1, Long.parseLong(bodyArray[0]));
-                preparedStatement.setInt(2, Integer.parseInt(bodyArray[1]));
-                preparedStatement.setInt(3, Integer.parseInt(bodyArray[2]));
-                preparedStatement.setString(4, Post.reverseEscape(bodyArray[3]));
-                preparedStatement.executeUpdate();
-                preparedStatement.clearParameters();
-                Transmission.floodfill(body);                
+                log.warning("hashCode not match");
+                return;
             }
-            else
-            {
-                log.info("post "+body+" exists");
-            }
+            if (DataBase.insertPost(post) == 1) Transmission.floodfill(packetBody);
         }
         catch (Exception e)
         {
             e.printStackTrace();
-            log.warning("dealFF: exception occured");
-        }
-        finally
-        {
-            try
-            {
-                if (preparedStatement != null) preparedStatement.close();
-                if (connection != null) connection.close();
-            }
-            catch (Exception e)
-            {
-                e.printStackTrace();
-                log.warning("dealFF: exception occured while closing");
-            }
         }
     }
 

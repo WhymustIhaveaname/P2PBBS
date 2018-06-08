@@ -13,7 +13,7 @@ public class Post{
     /**帖子发出的时间，以自纪元以来的秒数表示，为一个long（因为int只能存大约30年）*/
     private long time;
     /**帖子的内容，为一个字符串*/
-    private String  content;
+    private String content;
     /**父帖子的哈希值，为一个int*/
     private int parentHashCode;
     /**以c为内容以t为时间构造Post，parentHashCode默认为THEHASHCODE*/
