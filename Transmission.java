@@ -1,6 +1,8 @@
 import java.io.*;
 import java.net.*;
-import java.util.*;
+import java.util.Random;
+import java.sql.*;
+import java.util.logging.*;
 /**
     最后被包装好供主程序直接调用的类。
 使用方法：
@@ -25,6 +27,7 @@ import java.util.*;
     @author WhyMustIHaveAName
 */
 public class Transmission{
+    private static Logger log=Logger.getLogger("lavasoft");
     /**向peer请求节点列表*/
     public static void requestPeerList(Peer peer){
         Client g=new Client(Protocal.RPL,peer);
@@ -64,11 +67,59 @@ public class Transmission{
         t.start();
     }
 
+    /**启动TCP，UDP，HB服务器，以随机端口*/
+    public static byte onCreate(){
+        int port;
+        Connection conn;
+        Statement stmt;
+        ResultSet rs;
+        String sql;
+        try{
+            Class.forName("org.sqlite.JDBC");
+            conn=DriverManager.getConnection("jdbc:sqlite:Datas.db");
+            stmt=conn.createStatement();
+            rs=stmt.executeQuery("SELECT * FROM PORT");
+            if(rs.next()){
+                port=rs.getInt("MYPORT");
+            }else{
+                Random r=new Random(System.currentTimeMillis());
+                do{
+                    port=1024+r.nextInt(65536-1024);
+                    log.info("try port:"+Integer.toString(port));
+                }while(!getPortUsability(port));
+                sql=String.format("INSERT INTO PORT(MYPORT) VALUES(%d)",port);
+                stmt.executeUpdate(sql);
+            }
+            rs.close();stmt.close();conn.close();
+        }catch(Exception e){
+            e.printStackTrace();
+            return -1;
+        }
+        Transmission.listenTCP(port);
+        Transmission.listenUDP(port);
+        Transmission.sendHB(port);
+        log.info("created TCP,UDP and HB server");
+        return 0;
+    }
+
+    /**判断端口是否可用，可用返回true*/
+    public static boolean getPortUsability(int port){
+        try {
+            ServerSocket socket=new ServerSocket(port);
+            socket.close();
+            return true;
+        } catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     /**获得网络时间，还没写，先写一个能用的凑活着*/
     public static long getNetTime(){
         long time=System.currentTimeMillis()/1000;
         return time;
     }
+
 
     public static void main(String[] args){
         try{
