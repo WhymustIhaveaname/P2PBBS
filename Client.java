@@ -2,6 +2,7 @@ import java.io.*;
 import java.net.*;
 import java.sql.*;
 import java.util.logging.*;
+import java.util.LinkedList;
 /**
     处理作为客户端发出请求的种种。包括：请求节点列表，请求帖子列表，泛洪法发送
     帖子。为了使用本类你需要首先用type和dst（可选）构造类的实例：
@@ -191,33 +192,39 @@ public class Client implements Runnable{
                 //把头和尾截掉
                 reply=reply.substring(2,reply.length()-8);
             }
-            //打开数据库
-            Class.forName("org.sqlite.JDBC");
-            Connection conn=DriverManager.getConnection("jdbc:sqlite:Datas.db");
-            String s="INSERT INTO POST(TIME,HASH,PHASH,CONTENT) VALUES(?,?,?,?);";
-            PreparedStatement preStat=conn.prepareStatement(s);
+            
+            LinkedList<Post> postList = new LinkedList<Post>();
             for(String i:reply.split("\\],\\[")){
-                log.info("saving "+i);
                 String[] j=i.split(",");
-                preStat.setLong(1,Long.parseLong(j[0]));
-                preStat.setInt(2,Integer.parseInt(j[1]));
-                preStat.setInt(3,Integer.parseInt(j[2]));
-                preStat.setString(4, Post.reverseEscape(j[3]));
-                try{
-                    preStat.executeUpdate();
-                    preStat.clearParameters();
-                }catch(org.sqlite.SQLiteException e){
-                    preStat=conn.prepareStatement(s);
+                try
+                {
+                    Post post = new Post(Long.parseLong(j[0]), Post.reverseEscape(j[3]), Integer.parseInt(j[2]));
+                    if (Integer.parseInt(j[1]) != post.hashCode())
+                    {
+                        log.warning("post "+i+" hashCode not match");
+                        continue;
+                    }
+                    postList.add(post);
+                }
+                catch (Exception e)
+                {
+                    e.printStackTrace();
                 }
             }
-            preStat.close();conn.close();
+            DataBase.insertPost(postList.toArray(new Post[0]));
         }catch(Exception e){
             e.printStackTrace();
         }
     }
     /**测试sendRPAux功能的函数*/
     public static void testSendRPAux(){
-        String s="[6:RPR]\r\n[[1,2049459487,0,helloworld],[2,2049459488,0,helloworld],]\r\n[END]";
+        //String s="[6:RPR]\r\n[[1,2049459487,0,helloworld],[2,2049459488,0,helloworld],]\r\n[END]";
+        DataBase.delDataBase();
+        DataBase.initTables();
+        Post p1 = new Post(1,"1",0);
+        Post p2 = new Post(2,"2",0);
+        Post p3 = new Post(3,"3",0);
+        String s="[6:RPR]\r\n["+p1.toString()+","+p1.toString()+","+p3.toString()+",]\r\n[END]";
         Client c=new Client((byte)1);
         BufferedReader in=new BufferedReader(new StringReader(s));
         c.sendRPAux(in);
@@ -261,7 +268,7 @@ public class Client implements Runnable{
                 try
                 {
                     InetAddress host = InetAddress.getByName(peer.getstrip());
-                    String message = "[2:FF]\r\n"+content+"\r\n";
+                    String message = "[2:FF]\r\n"+content+"\r\n[END]";
                     DatagramPacket datagramPacket = new DatagramPacket(message.getBytes(), message.length(), host, peer.getport());
                     datagramSocket.send(datagramPacket);
                 }

@@ -268,7 +268,7 @@ class PostWindow implements MouseListener{
         String label=Btemp.getLabel();
         Post aPost=new Post(Transmission.getNetTime(),JTA.getText());
         Log.info("gen post:"+aPost.toString());
-        Transmission.floodfill(aPost.toString());
+        if (DataBase.insertPost(aPost) == 1) Transmission.floodfill(aPost.toString());
     }
 
     @Override
