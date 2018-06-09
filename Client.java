@@ -268,7 +268,7 @@ public class Client implements Runnable{
                 try
                 {
                     InetAddress host = InetAddress.getByName(peer.getstrip());
-                    String message = "[2:FF]\r\n"+content+"\r\n";
+                    String message = "[2:FF]\r\n"+content+"\r\n[END]";
                     DatagramPacket datagramPacket = new DatagramPacket(message.getBytes(), message.length(), host, peer.getport());
                     datagramSocket.send(datagramPacket);
                 }
