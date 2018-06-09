@@ -10,6 +10,7 @@ public class Post{
     public static final char LEFT_BRACKET = '\ue001';
     public static final char RIGHT_BRACKET = '\ue002';
     public static final char LINE_BREAK = '\ue003';
+    public static final String FEEDBACK="\ue004";
     /**帖子发出的时间，以自纪元以来的秒数表示，为一个long（因为int只能存大约30年）*/
     private long time;
     /**帖子的内容，为一个字符串*/
@@ -63,7 +64,7 @@ public class Post{
     }
     /**运行main函数可以测试类的好坏*/
     public static void main(String argv[]){
-        Post p=new Post(1,"helloworld");
+        /*Post p=new Post(1,"helloworld");
         System.out.println(p.toString());
         System.out.println(p.hashCode());
         p.setTime(2);
@@ -74,7 +75,8 @@ public class Post{
         System.out.println(p.hashCode());
         p.setParentHashCode(1);
         System.out.println(p.toString());
-        System.out.println(p.hashCode());
+        System.out.println(p.hashCode());*/
+        System.out.println((Post.FEEDBACK+"hi").length());
     }
     public void setTime(long t){
         this.time=t;

@@ -192,7 +192,7 @@ public class Client implements Runnable{
                 //把头和尾截掉
                 reply=reply.substring(2,reply.length()-8);
             }
-            
+
             LinkedList<Post> postList = new LinkedList<Post>();
             for(String i:reply.split("\\],\\[")){
                 String[] j=i.split(",");
@@ -220,7 +220,11 @@ public class Client implements Runnable{
     public static void testSendRPAux(){
         //String s="[6:RPR]\r\n[[1,2049459487,0,helloworld],[2,2049459488,0,helloworld],]\r\n[END]";
         DataBase.delDataBase();
-        DataBase.initTables();
+        try{
+            DataBase.initTables();
+        }catch(P2PBBSException e){
+            e.printStackTrace();
+        }
         Post p1 = new Post(1,"1",0);
         Post p2 = new Post(2,"2",0);
         Post p3 = new Post(3,"3",0);
@@ -269,7 +273,9 @@ public class Client implements Runnable{
                 {
                     InetAddress host = InetAddress.getByName(peer.getstrip());
                     String message = "[2:FF]\r\n"+content+"\r\n[END]";
-                    DatagramPacket datagramPacket = new DatagramPacket(message.getBytes(), message.length(), host, peer.getport());
+                    byte[] messageByte=message.getBytes();
+                    DatagramPacket datagramPacket = new DatagramPacket(messageByte,messageByte.length, host, peer.getport());
+                    
                     datagramSocket.send(datagramPacket);
                 }
                 catch (Exception e)

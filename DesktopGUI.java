@@ -8,7 +8,7 @@ public class DesktopGUI implements MouseListener,Runnable{
     private Frame F;
     private Panel Pnorth,Pwest,Pcenter,Pnorth1,Pnorth2,Pnorth3,Pnorth4;;
     private Button Binit,Bdel;
-    private Button Btcp,Budp,Bhb,Bviewposts,Bviewpeers;
+    private Button Btcp,Budp,Bhb,Bviewposts,Bviewpeers,Bviewfb;
     private Button Brpl,Brp,Bpost;
     private Label Lportnum,Lpeernum,Lfrom;
     private TextArea TA;
@@ -33,7 +33,8 @@ public class DesktopGUI implements MouseListener,Runnable{
         Bviewpeers=new Button("View peers");
         Brpl=new Button("Request peer list");
         Brp=new Button("Request Post");
-        Bpost=new Button("Post");
+        Bpost=new Button("Post or Feedback");
+        Bviewfb=new Button("View FB");
         Lportnum=new Label();
         Lportnum.setText("Port:");
         Lpeernum=new Label();
@@ -62,6 +63,7 @@ public class DesktopGUI implements MouseListener,Runnable{
         Pnorth.add(Pnorth4);
         Pwest.add(Bviewposts);
         Pwest.add(Bviewpeers);
+        Pwest.add(Bviewfb);
         Pcenter.add(TA);
         F.add(Pnorth,BorderLayout.NORTH);
         F.add(Pwest,BorderLayout.WEST);
@@ -87,6 +89,7 @@ public class DesktopGUI implements MouseListener,Runnable{
         Brpl.addMouseListener(this);
         Brp.addMouseListener(this);
         Bpost.addMouseListener(this);
+        Bviewfb.addMouseListener(this);
     }
     @Override
     public void mouseClicked(MouseEvent e){
@@ -109,6 +112,10 @@ public class DesktopGUI implements MouseListener,Runnable{
                 TAFlag=1;
                 showPeer();
                 break;
+            case("View FB"):
+                TAFlag=2;
+                showFB();
+                break;
             case("Request peer list"):
                 Transmission.requestPeerList(new Peer(TFPeer.getText(),null));
                 break;
@@ -116,13 +123,16 @@ public class DesktopGUI implements MouseListener,Runnable{
                 Transmission.requestPost(new Peer(TFPeer.getText(),null),0);
                 break;
             case("Init DB"):
-                DataBase.initTables();break;
+                DataBase.checkDB();
+                break;
             case("Del DB"):
                 DataBase.delDataBase();break;
-            case("Post"):
+            case("Post or Feedback"):
                 PostWindow PW=new PostWindow();
                 PW.init();
                 break;
+
+
         }
     }
     private void startTCPServer(Button B){
@@ -155,14 +165,41 @@ public class DesktopGUI implements MouseListener,Runnable{
                 long time=rs.getLong("TIME");
                 int hash=rs.getInt("HASH");
                 int phash=rs.getInt("PHASH");
-                String apost=String.format("%010d %010d %010d\n%s\n",time,hash,phash,rs.getString("CONTENT"));
-                Sb.append(apost);
+                String content=rs.getString("CONTENT");
+                if(!(content.startsWith(Post.FEEDBACK))){
+                    String apost=String.format("%010d %010d %010d\n%s\n",time,hash,phash,content);
+                    Sb.append(apost);
+                }
             }
             rs.close();preStat.close();conn.close();
         }catch(Exception e){
             e.printStackTrace();
         }
         TA.setText(Sb.toString());
+    }
+    private void showFB(){
+        StringBuilder Sb=new StringBuilder();
+        try{
+            Class.forName("org.sqlite.JDBC");
+            Connection conn = DriverManager.getConnection("jdbc:sqlite:Datas.db");
+            String s="SELECT * FROM POST ORDER BY TIME DESC;";
+            PreparedStatement preStat=conn.prepareStatement(s);
+            ResultSet rs=preStat.executeQuery();
+            while(rs.next()){
+                long time=rs.getLong("TIME");
+                int hash=rs.getInt("HASH");
+                int phash=rs.getInt("PHASH");
+                String content=rs.getString("CONTENT");
+                if(content.startsWith(Post.FEEDBACK)){
+                    String apost=String.format("%010d %010d %010d\n%s\n",time,hash,phash,content);
+                    Sb.append(apost);
+                }
+            }
+            rs.close();preStat.close();conn.close();
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+      TA.setText(Sb.toString());
     }
     private void showPeer(){
         StringBuilder Sb=new StringBuilder();
@@ -203,6 +240,7 @@ public class DesktopGUI implements MouseListener,Runnable{
             switch(TAFlag){
                 case 0:showPost();break;
                 case 1:showPeer();break;
+                case 2:showFB();break;
             }
             try{
                 Thread.sleep(1000);
@@ -241,7 +279,7 @@ public class DesktopGUI implements MouseListener,Runnable{
 class PostWindow implements MouseListener{
     private Frame F;
     private JTextArea JTA;
-    private Button Bp;
+    private Button Bp,Bfb;
     private Panel P;
     private static Logger Log=Logger.getLogger("lavasoft");
     public void init(){
@@ -249,7 +287,9 @@ class PostWindow implements MouseListener{
         P=new Panel(new GridLayout(10,1));
         JTA=new JTextArea(16,40);
         Bp=new Button("Post");
+        Bfb=new Button("Feedback");
         P.add(Bp);
+        P.add(Bfb);
         F.add(P,BorderLayout.EAST);
         F.add(JTA,BorderLayout.WEST);
         F.pack();
@@ -261,14 +301,26 @@ class PostWindow implements MouseListener{
             }
         });
         Bp.addMouseListener(this);
+        Bfb.addMouseListener(this);
     }
     @Override
     public void mouseClicked(MouseEvent e){
         Button Btemp=(Button)e.getSource();
         String label=Btemp.getLabel();
-        Post aPost=new Post(Transmission.getNetTime(),JTA.getText());
-        Log.info("gen post:"+aPost.toString());
-        if (DataBase.insertPost(aPost) == 1) Transmission.floodfill(aPost.toString());
+        switch(label){
+            case("Post"):
+                Post aPost=new Post(Transmission.getNetTime(),JTA.getText());
+                Log.info("gen post:"+aPost.toString());
+                if (DataBase.insertPost(aPost) == 1) Transmission.floodfill(aPost.toString());
+
+                break;
+            case("Feedback"):
+                Post bPost=new Post(Transmission.getNetTime(),Post.FEEDBACK+JTA.getText());
+                Log.info("gen post:"+bPost.toString());
+                if (DataBase.insertPost(bPost) == 1) Transmission.floodfill(bPost.toString());
+                break;
+        }
+        F.dispose();
     }
 
     @Override
