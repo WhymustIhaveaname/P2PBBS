@@ -1,0 +1,22 @@
+<resources>
+    <string name="app_name">My Application</string>
+    <string name="接入地址">请输入接入点地址</string>
+    <string name="你的地址">请输入你的地址（可以不填）</string>
+    <string name="帖子内容">请输入你的帖子内容</string>
+    <string name="看帖">看帖</string>
+    <string name="发帖">发帖</string>
+    <string name="设置">设置</string>
+    <string name="我的地址">我的地址</string>
+    <string name="接入点地址">接入点地址</string>
+    <string name="接入">接入</string>
+    <string name="发布">发布</string>
+    <string name="回复">回复</string>
+    <string name="刷新">刷新</string>
+    <string name="评论">评论</string>
+    <string name="返回">返回</string>
+    <string name="与我相关">与我相关</string>
+    <string name="重新接入">重新接入</string>
+    <string name="空间清理">空间清理</string>
+    <string name="反馈">反馈</string>
+    <string name="关于我们">关于我们</string>
+</resources>
